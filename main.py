@@ -3,8 +3,6 @@ from manim_slides import Slide
 from PIL import Image
 import copy
 
-myTemplate = TexTemplate()
-myTemplate.add_to_preamble(r"\usepackage[ruled]{algorithm2e}")
 def GrowSearchTree():
             group = VGroup()
             title = Tex(r"Grow Search Tree")
@@ -183,9 +181,136 @@ class Overview(Slide):
 
 class MCTS(Slide):
       def construct(self):
-            title = Tex("MCTS with D-UCB").scale(1.25).to_corner(UP)
+            title = Tex("MCTS with D-UCB Selection").scale(1.25).to_corner(UP)
             self.play(FadeIn(title,shift = DOWN))
-            self.wait(0.01)
+            self.next_slide()
+            nodes1 = [0, 
+                      1, 2, 3,
+                      4, 5, 6,
+                      7, 8, 9, 
+                      10, 11, 12]
+            edges1 = [(0, 1), (0, 2), (0, 3),
+                      (1, 4), (1, 5), (1, 6),
+                      (2, 7), (2, 8), (2, 9),
+                      (3, 10), (3, 11), (3, 12)
+                      ]
+
+            # Create Graph object but don't show it yet
+            graph1 = Graph(
+                nodes1,
+                edges1,
+                layout="tree",  # nice tree layout
+                root_vertex= 0,
+                layout_scale=6,
+                vertex_config={"radius": 0.3, "color": BLUE},
+                edge_config={"stroke_color": WHITE}
+            )
+            # Create inital graph and ask well how do we select a node to traverse??? 
+            graph1.next_to(title,DOWN, buff = 0.5)
+            self.play(FadeIn(graph1, shift = UP))
+            self.next_slide()
+
+
+            # Create arrows through different paths
+            path1 = [0, 1, 4]   #
+            path2 = [0, 2, 9]  
+            arrow_groups1 = VGroup()
+            # Animate traversal of first path
+            for i in range(len(path1) - 1):
+                start = graph1[path1[i]].get_center()
+                end = graph1[path1[i+1]].get_center()
+                arrow = Arrow(
+                     start = start,
+                     end = end,
+                     buff = 0.1,
+                     color = YELLOW
+                )
+                self.play(Create(arrow))
+                arrow_groups1.add(arrow)
+            self.play(FadeOut(arrow_groups1))
+            
+            # Pause at leaf
+            self.wait(0.1)
+
+            arrow_groups2 = VGroup()
+            # Animate traversal of first path
+            for i in range(len(path2) - 1):
+                start = graph1[path2[i]].get_center()
+                end = graph1[path2[i+1]].get_center()
+                arrow = Arrow(
+                     start = start,
+                     end = end,
+                     buff = 0.1,
+                     color = YELLOW
+                )
+                self.play(Create(arrow))
+                arrow_groups2.add(arrow)
+            self.play(FadeOut(arrow_groups2))
+            # Pause at leaf
+            self.wait(0.1)
+            self.next_slide()
+
+            # Now show the arg max for selecting node with the highest UCB Score 
+            algo_template = TexTemplate()
+        
+            #Add the asmath
+            algo_template.add_to_preamble(r"\usepackage{amsmath}")
+
+            arg_max_UCB = MathTex(r" I_{i_{d}, t}",
+                                  r" = \operatorname*{argmax}_{j \in C(i_d)} U_{j,t_{i_d},t_j} ").scale(1.25)
+            arg_max_UCB.next_to(graph1, DOWN, buff = 1)
+
+            self.play(FadeIn(arg_max_UCB, shift = UP))
+            self.next_slide()
+
+            # Underline I to emphasize what this actually is 
+            underline_I = Underline(arg_max_UCB[0], color = YELLOW)
+            self.play(Create(underline_I))
+            self.next_slide()
+
+            # Start from root and say its really just trying to find a node that has the maximum UCB  score
+            root_copy = copy.deepcopy(graph1.vertices[0])
+            root_copy.set_color(RED)
+            self.play(FadeIn(root_copy))
+            for _ in range(3):
+                self.play(Indicate(graph1.vertices[1]),
+                        Indicate(graph1.vertices[2]),
+                        Indicate(graph1.vertices[3]))
+            self.next_slide()
+
+            self.play(FadeOut(underline_I, shift = LEFT),
+                      FadeOut(arg_max_UCB, shift = LEFT))
+            
+            # Swap the Selection node equation with the UCB equation 
+            D_UCB_eq = MathTex(
+            r"U_{j,t_{i_d},t_j}(\gamma) = \hat{F}_{j,t_j}(\gamma) + c_{t_{i_d}, t_j}(\gamma)"
+            ).scale(1.25)
+            D_UCB_eq.move_to(arg_max_UCB.get_center())
+            self.play(FadeIn(D_UCB_eq, shift = RIGHT))
+            self.next_slide()
+
+            # Move around the Graph and UCB Equation 
+            self.play(FadeOut(graph1,shift = LEFT),
+                      FadeOut(root_copy),
+                      D_UCB_eq.animate.next_to(title, DOWN, buff = 0.5))
+            self.next_slide()
+
+            # Create gamma TODO(SMW): Cleanup the positioning  
+            gamma = MathTex(r"\gamma \in (\frac{1}{2}, 1) \text{: Discount Factor}")
+            self.play(Create(gamma))
+            self.next_slide()
+
+            # Child node with discount factor
+            child_node_count = MathTex(r"t_j(\gamma) = \sum_{u=1}^{t} \gamma^{t-u} \bold{1}_{(I_{i_d},u=j)} \text{: Discounted num. of times child node visited}").next_to(gamma,DOWN,buff = 0.25)
+            self.play(Create(child_node_count))
+            self.next_slide()
+            
+            # Parent node visited 
+            parent_node_count = MathTex(r"t_{i_d}(\gamma) = \sum_{j \in C(i_d)} t_j(\gamma) \text{: Discounted num. of times Parent node visited}").next_to(child_node_count,DOWN,buff = 0.25)
+            self.play(Create(parent_node_count))
             self.next_slide()
       
-        
+            # Discounted Emperical Average: 
+            dis_empircal_avg = MathTex(r"\hat{F}_{j,t_j}(\gamma) = \frac{1}{t_{j}(\gamma)} \sum_{u=1}^{t} \gamma^{t-u}F_{u}  \bold{1}_{(I_{i_d},u=j)}").next_to(parent_node_count,DOWN,buff = 0.25) 
+            self.play(Create(dis_empircal_avg))
+            self.next_slide()
