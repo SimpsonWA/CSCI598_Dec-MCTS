@@ -143,8 +143,6 @@ class Overview(Slide):
         
         # Add the algorithm2e package to the preamble
         algo_template.add_to_preamble(r"\usepackage[ruled]{algorithm2e}")
-
-        # The LaTeX code for the algorithm
         algo_code = r"""
         \begin{algorithm}[H]
         \caption{Overview of Dec-MCTS for robot $r$}
@@ -178,139 +176,184 @@ class Overview(Slide):
         self.play(FadeIn(algo_mobject, shift = UP))
         self.next_slide()
 
+class MCTS_Simple(Slide):
+    def construct(self):
+        # === TITLE ===
+        title = Tex("Simple MCTS").scale(1.25)
+        title.to_corner(UP)
+        self.play(FadeIn(title, shift=UP))
+        self.next_slide()
 
-class MCTS(Slide):
-      def construct(self):
-            title = Tex("MCTS with D-UCB Selection").scale(1.25).to_corner(UP)
-            self.play(FadeIn(title,shift = DOWN))
-            self.next_slide()
-            nodes1 = [0, 
-                      1, 2, 3,
-                      4, 5, 6,
-                      7, 8, 9, 
-                      10, 11, 12]
-            edges1 = [(0, 1), (0, 2), (0, 3),
-                      (1, 4), (1, 5), (1, 6),
-                      (2, 7), (2, 8), (2, 9),
-                      (3, 10), (3, 11), (3, 12)
-                      ]
+        # === GRAPH STRUCTURE ===
+        nodes = list(range(15))
+        edges = [
+            (0, 1), (0, 2), (0, 3),
+            (1, 4), (1, 5), (1, 6),
+            (2, 7), (2, 8), (2, 9),
+            (3, 10), (3, 11), (3, 12),
+            (12, 13), (12, 14)
+        ]
 
-            # Create Graph object but don't show it yet
-            graph1 = Graph(
-                nodes1,
-                edges1,
-                layout="tree",  # nice tree layout
-                root_vertex= 0,
-                layout_scale=6,
-                vertex_config={"radius": 0.3, "color": BLUE},
-                edge_config={"stroke_color": WHITE}
-            )
-            # Create inital graph and ask well how do we select a node to traverse??? 
-            graph1.next_to(title,DOWN, buff = 0.5)
-            self.play(FadeIn(graph1, shift = UP))
-            self.next_slide()
+        graph = Graph(
+            nodes,
+            edges,
+            layout="tree",
+            root_vertex=0,
+            layout_scale=6,
+            vertex_config={"radius": 0.3, "color": BLUE},
+            edge_config={"stroke_color": GRAY}
+        )
 
+        graph.next_to(title, DOWN, buff=0.5)
+        self.play(FadeIn(graph, shift=UP))
+        self.next_slide()
 
-            # Create arrows through different paths
-            path1 = [0, 1, 4]   #
-            path2 = [0, 2, 9]  
-            arrow_groups1 = VGroup()
-            # Animate traversal of first path
-            for i in range(len(path1) - 1):
-                start = graph1[path1[i]].get_center()
-                end = graph1[path1[i+1]].get_center()
-                arrow = Arrow(
-                     start = start,
-                     end = end,
-                     buff = 0.1,
-                     color = YELLOW
-                )
-                self.play(Create(arrow))
-                arrow_groups1.add(arrow)
-            self.play(FadeOut(arrow_groups1))
-            
-            # Pause at leaf
-            self.wait(0.1)
+        # === PHASE LABEL SETUP ===
+        phase_title = Tex(r"\textbf{Phase: }").scale(1.5).next_to(graph, DOWN, buff = 2)
+        phase_label = Tex("").next_to(phase_title, RIGHT)
+        self.play(Write(phase_title), FadeIn(phase_label))
+        self.next_slide()
 
-            arrow_groups2 = VGroup()
-            # Animate traversal of first path
-            for i in range(len(path2) - 1):
-                start = graph1[path2[i]].get_center()
-                end = graph1[path2[i+1]].get_center()
-                arrow = Arrow(
-                     start = start,
-                     end = end,
-                     buff = 0.1,
-                     color = YELLOW
-                )
-                self.play(Create(arrow))
-                arrow_groups2.add(arrow)
-            self.play(FadeOut(arrow_groups2))
-            # Pause at leaf
-            self.wait(0.1)
-            self.next_slide()
+        # === PHASE 1: SELECTION ===
+        selection_color = YELLOW
+        selection_path = [0, 3, 12, 14]
+        self.play(Transform(phase_label, Tex("Selection", color=selection_color).scale(1.5).next_to(phase_title, RIGHT)))
+
+        selection_arrows = VGroup()
+        for i in range(len(selection_path) - 1):
+            start = graph[selection_path[i]].get_center()
+            end = graph[selection_path[i+1]].get_center()
+            arrow = Arrow(start=start, end=end, buff=0.1, color=selection_color)
+            selection_arrows.add(arrow)
+        self.play(LaggedStartMap(Create, selection_arrows, lag_ratio=0.3))
+        self.next_slide()
+
+        # === PHASE 2: EXPANSION ===
+        expansion_color = GREEN
+        self.play(Transform(phase_label, Tex("Expansion", color=expansion_color).scale(1.5).next_to(phase_title, RIGHT)))
+        new_node = 15
+        parent_node = 14
+        new_node_dot = Dot(graph[parent_node].get_center(), color=expansion_color, radius=0.3).next_to(
+             graph[parent_node].get_center(), DOWN, buff = 0.75
+        )
+        edge = Line(graph[parent_node].get_center(), new_node_dot.get_center(), color=expansion_color)
+        self.play(Create(edge), FadeIn(new_node_dot, scale=0.5))
+        self.play(FadeOut(selection_arrows))
+        self.next_slide()
+
+        # === PHASE 3: SIMULATION ===
+        simulation_color = ORANGE
+        self.play(Transform(phase_label, Tex("Simulation", color=simulation_color).scale(1.5).next_to(phase_title, RIGHT)))
+        sim_arrow = DashedLine(new_node_dot.get_center(), new_node_dot.get_center() + DOWN*1.5, color=simulation_color)
+        sim_label = Tex("Simulate rollout").scale(0.8).next_to(sim_arrow, DOWN)
+        self.play(Create(sim_arrow), FadeIn(sim_label))
+        self.next_slide()
+
+        # === PHASE 4: BACKPROPAGATION ===
+        backprop_color = RED
+        self.play(Transform(phase_label, Tex("Backpropagation", color=backprop_color).scale(1.5).next_to(phase_title, RIGHT)))
+
+        backprop_arrows = VGroup()
+        for i in reversed(range(len(selection_path))):
+            start = graph[selection_path[i]].get_center()
+            end = graph[selection_path[i-1]].get_center() if i > 0 else graph[0].get_center()
+            arrow = Arrow(start=start, end=end, buff=0.1, color=backprop_color)
+            backprop_arrows.add(arrow)
+        self.play(LaggedStartMap(Create, backprop_arrows, lag_ratio=0.3))
+
+        # Cleanup / Fade out
+        self.play(FadeOut(VGroup(phase_label, phase_title, sim_label, sim_arrow, new_node_dot, edge, backprop_arrows)), FadeOut(graph), FadeOut(title))
+
+        
+class MCTS_DUCB(Slide):
+     def construct(self):
+        title = Tex("MCTS with D-UCB Selection").scale(1.25).to_corner(UP)
+        self.play(FadeIn(title,shift = DOWN))
+        self.next_slide()
+            # Create the Algo
+        algo_template = TexTemplate()
+            # Add the algorithm2e package to the preamble
+        algo_template.add_to_preamble(r"\usepackage[ruled]{algorithm2e}")
+        algo_code = r"""
+            \begin{algorithm}[H]
+            \caption{Grow the search tree for robot $r$ using MCTS}
+            \KwIn{Partial tree $\mathcal{T}^r$, distributions for other robots $(\hat{\mathcal{X}}_n^{(r)}, q_n^{(r)})$, budget $B^r$}
+            \KwOut{updated partial tree $\mathcal{T}^r$}
+
+            \For{fixed number of samples }{
+                    $i_{d-1} \gets NODESELECTIOND-UCT(\mathcal{T}^r)$\;
+
+                    $i_d \gets EXPANDTREE(i_{d-1})$\;
+
+                    $\bold{x}^{(r)} \gets SAMPLE(\hat{\mathcal{X}}_n^{(r)}, q_n^{(r)})$\;
+
+                    $\bold{x}^{r} \gets PERFORMROLLOUTPOLICY(i_d , \bold{x}^{(r)}, B^r)$\;
+
+                    $F_t \gets f^r(\bold{x}^r \cup \bold{x}^{(r)})$\;
+
+                    $\mathcal{T}^r \gets BACKPROPAGATION(\mathcal{T}^r, i_d , F_t)$\;
+                
+            }
+            \Return $\mathcal{T}^r$\;
+
+            \end{algorithm}
+            """
+
+        algo_mobject = Tex(algo_code, tex_template=algo_template, font_size=32)
+        self.play(FadeIn(algo_mobject))
+        self.next_slide()
+
 
             # Now show the arg max for selecting node with the highest UCB Score 
-            algo_template = TexTemplate()
+        algo_template = TexTemplate()
         
             #Add the asmath
-            algo_template.add_to_preamble(r"\usepackage{amsmath}")
+        algo_template.add_to_preamble(r"\usepackage{amsmath}")
 
-            arg_max_UCB = MathTex(r" I_{i_{d}, t}",
-                                  r" = \operatorname*{argmax}_{j \in C(i_d)} U_{j,t_{i_d},t_j} ").scale(1.25)
-            arg_max_UCB.next_to(graph1, DOWN, buff = 1)
+        arg_max_UCB = MathTex(r" I_{i_{d}, t}",
+                            r" = \operatorname*{argmax}_{j \in C(i_d)} U_{j,t_{i_d},t_j} ").scale(1.25)
 
-            self.play(FadeIn(arg_max_UCB, shift = UP))
-            self.next_slide()
+        self.play(FadeIn(arg_max_UCB, shift = UP))
+        self.next_slide()
 
             # Underline I to emphasize what this actually is 
-            underline_I = Underline(arg_max_UCB[0], color = YELLOW)
-            self.play(Create(underline_I))
-            self.next_slide()
+        underline_I = Underline(arg_max_UCB[0], color = YELLOW)
+        self.play(Create(underline_I))
+        self.next_slide()
 
-            # Start from root and say its really just trying to find a node that has the maximum UCB  score
-            root_copy = copy.deepcopy(graph1.vertices[0])
-            root_copy.set_color(RED)
-            self.play(FadeIn(root_copy))
-            for _ in range(3):
-                self.play(Indicate(graph1.vertices[1]),
-                        Indicate(graph1.vertices[2]),
-                        Indicate(graph1.vertices[3]))
-            self.next_slide()
-
-            self.play(FadeOut(underline_I, shift = LEFT),
+        self.play(FadeOut(underline_I, shift = LEFT),
                       FadeOut(arg_max_UCB, shift = LEFT))
             
             # Swap the Selection node equation with the UCB equation 
-            D_UCB_eq = MathTex(
+        D_UCB_eq = MathTex(
             r"U_{j,t_{i_d},t_j}(\gamma) = \hat{F}_{j,t_j}(\gamma) + c_{t_{i_d}, t_j}(\gamma)"
             ).scale(1.25)
-            D_UCB_eq.move_to(arg_max_UCB.get_center())
-            self.play(FadeIn(D_UCB_eq, shift = RIGHT))
-            self.next_slide()
+        D_UCB_eq.move_to(arg_max_UCB.get_center())
+        self.play(FadeIn(D_UCB_eq, shift = RIGHT))
+        self.next_slide()
 
-            # Move around the Graph and UCB Equation 
-            self.play(FadeOut(graph1,shift = LEFT),
-                      FadeOut(root_copy),
-                      D_UCB_eq.animate.next_to(title, DOWN, buff = 0.5))
-            self.next_slide()
 
             # Create gamma TODO(SMW): Cleanup the positioning  
-            gamma = MathTex(r"\gamma \in (\frac{1}{2}, 1) \text{: Discount Factor}")
-            self.play(Create(gamma))
-            self.next_slide()
+        gamma = MathTex(r"\gamma \in (\frac{1}{2}, 1) \text{: Discount Factor}").next_to(D_UCB_eq, DOWN, buff  = 0.25)
+        self.play(Create(gamma))
+        self.next_slide()
 
             # Child node with discount factor
-            child_node_count = MathTex(r"t_j(\gamma) = \sum_{u=1}^{t} \gamma^{t-u} \bold{1}_{(I_{i_d},u=j)} \text{: Discounted num. of times child node visited}").next_to(gamma,DOWN,buff = 0.25)
-            self.play(Create(child_node_count))
-            self.next_slide()
+        child_node_count = MathTex(r"t_j(\gamma) = \sum_{u=1}^{t} \gamma^{t-u} \bold{1}_{(I_{i_d},u=j)} \text{: Discounted num. of times child node visited}").next_to(gamma,DOWN,buff = 0.25)
+        self.play(Create(child_node_count))
+        self.next_slide()
             
             # Parent node visited 
-            parent_node_count = MathTex(r"t_{i_d}(\gamma) = \sum_{j \in C(i_d)} t_j(\gamma) \text{: Discounted num. of times Parent node visited}").next_to(child_node_count,DOWN,buff = 0.25)
-            self.play(Create(parent_node_count))
-            self.next_slide()
+        parent_node_count = MathTex(r"t_{i_d}(\gamma) = \sum_{j \in C(i_d)} t_j(\gamma) \text{: Discounted num. of times Parent node visited}").next_to(child_node_count,DOWN,buff = 0.25)
+        self.play(Create(parent_node_count))
+        self.next_slide()
       
             # Discounted Emperical Average: 
-            dis_empircal_avg = MathTex(r"\hat{F}_{j,t_j}(\gamma) = \frac{1}{t_{j}(\gamma)} \sum_{u=1}^{t} \gamma^{t-u}F_{u}  \bold{1}_{(I_{i_d},u=j)}").next_to(parent_node_count,DOWN,buff = 0.25) 
-            self.play(Create(dis_empircal_avg))
-            self.next_slide()
+        dis_empircal_avg = MathTex(r"\hat{F}_{j,t_j}(\gamma) = \frac{1}{t_{j}(\gamma)} \sum_{u=1}^{t} \gamma^{t-u}F_{u}  \bold{1}_{(I_{i_d},u=j)}").next_to(parent_node_count,DOWN,buff = 0.25) 
+        self.play(Create(dis_empircal_avg))
+        self.next_slide()
+
+            # Discounted Exploration Bonus: 
+        dis_exp_bonus = MathTex(r"c_{t_{i_d}, t_j}(\gamma) := 2C_p \sqrt{\frac{\log t_{i_d}(\gamma)}{t_j(\gamma)}}").next_to(dis_empircal_avg,DOWN,buff = 0.25) 
+        self.play(Create(dis_exp_bonus))
+        self.next_slide()
