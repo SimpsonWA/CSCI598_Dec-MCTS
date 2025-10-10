@@ -303,6 +303,10 @@ class MCTS_DUCB(Slide):
         self.play(FadeIn(algo_mobject))
         self.next_slide()
 
+        # TODO SMW: Maybe underline each part 
+        self.play(FadeOut(algo_mobject, shift = LEFT))
+        self.next_slide()
+
 
             # Now show the arg max for selecting node with the highest UCB Score 
         algo_template = TexTemplate()
@@ -353,7 +357,63 @@ class MCTS_DUCB(Slide):
         self.play(Create(dis_empircal_avg))
         self.next_slide()
 
-            # Discounted Exploration Bonus: 
+        # Discounted Exploration Bonus: 
         dis_exp_bonus = MathTex(r"c_{t_{i_d}, t_j}(\gamma) := 2C_p \sqrt{\frac{\log t_{i_d}(\gamma)}{t_j(\gamma)}}").next_to(dis_empircal_avg,DOWN,buff = 0.25) 
         self.play(Create(dis_exp_bonus))
+        self.next_slide()
+
+class Analysis(Slide):
+     def construct(self):
+        title = Tex("Analysis: D-UCB Applied to Bandits").scale(1.25).to_corner(UP)
+        self.play(FadeIn(title,shift = DOWN))
+        self.next_slide()
+
+
+class ExperimentTeam(Slide):
+     def construct(self):
+        frame_width = self.camera.frame_width
+        frame_height = self.camera.frame_height
+        
+        # Load Figure images 
+        fig_a = ImageMobject("Exp6_FigA.png").scale(1.5)
+        fig_b = ImageMobject("Exp6_Figb.png").scale(1.5)
+        fig_2 = ImageMobject("fig2.png").scale(1.5)
+
+        title = Tex("Experiment - Generalized Team Orienteering").scale(1.25).to_corner(UP)
+        self.play(FadeIn(title,shift = DOWN))
+        self.next_slide()
+
+        # Fade in the first figure explaining the experiment
+        self.play(FadeIn(fig_2, shift = UP))
+        self.next_slide()
+
+        # TODO SMW : Middle step explaining expectaiton cals + Setup 
+        self.play(fig_2.animate.shift(LEFT * 4)) # Shift over and show equations 
+        # Set of vetices for a graph
+        equation_group = VGroup()
+        vertex_eq = MathTex(r"v_i \in \mathcal{V}")
+        set_collection_eq = MathTex(r"S_k \subseteq \mathcal{V}")
+        expectation_eq1 = MathTex(
+            r"\mathbb{E}[g] = \sum_{S_k \in S} w_k \cdot P_{qn} \Big( \exists v_j \in x \text{ s.t. } v_j \in S_k \Big)"
+        )
+        expectation_eq2 = MathTex(r"TODO")
+
+        # Group them vertically with exact left alignment
+        equation_group = VGroup( vertex_eq, set_collection_eq, expectation_eq1, expectation_eq2).arrange(DOWN, aligned_edge=LEFT, buff=0.5)
+
+        # Position the whole group to the right of the figure
+        equation_group.next_to(fig_2, RIGHT, buff=1)
+
+        for eqs in equation_group:
+             self.play(FadeIn(eqs, shift = UP))
+             self.next_slide()
+
+        # Fade out the first figure and fade in the results ??
+        results = Group(fig_a,fig_b).arrange(RIGHT, buff=0.8)
+        self.play(FadeIn(results, shift = RIGHT),
+                  FadeOut(equation_group, shift = RIGHT),
+                  FadeOut(fig_2, shift  = UP))
+        self.next_slide()
+        # Somthing
+        self.play(FadeOut(results), FadeOut(title))
         self.next_slide()
